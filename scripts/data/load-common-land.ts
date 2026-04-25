@@ -1,10 +1,12 @@
 /**
  * load-common-land.ts
  *
- * Downloads the Natural England Registered Common Land dataset via WFS
- * and loads it into the common_land table.
+ * Downloads the Natural England CRoW Act 2000 Access Layer (common land)
+ * via ArcGIS FeatureServer and loads it into the common_land table.
  *
- * Source: Natural England Open Data Geoportal
+ * Source: Natural England / ArcGIS Online
+ * 42,057 features, paginated at 2,000 per request.
+ *
  * Licence: Open Government Licence v3.0
  * Attribution: "© Natural England copyright. Contains Ordnance Survey data
  *               © Crown copyright and database right [year]."
@@ -18,14 +20,27 @@ import { createClient } from '@supabase/supabase-js'
 
 config({ path: '.env.local' })
 
-// Natural England WFS — CRoW Act 2000 Access Layer (Registered Common Land)
-const WFS_URL =
-  'https://environment.data.gov.uk/spatialdata/crow-act-2000-access-layer-open-access-land/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&typeNames=CROW_Act_2000_Access_Layer%3AOpen_Access_Land&SRSNAME=urn:ogc:def:crs:EPSG::4326&outputFormat=application/json'
-
+const ARCGIS_BASE =
+  'https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query'
+const PAGE_SIZE = 2000
 const DATA_YEAR = new Date().getFullYear()
-const BATCH_SIZE = 200
-// England bounding box — filters out Welsh common land
+const SUPABASE_BATCH = 200
+
+// England bounding box — filters out Welsh features
 const ENGLAND = { minLat: 49.8, maxLat: 55.8, minLng: -6.5, maxLng: 2.0 }
+
+interface ArcGisFeature {
+  type: 'Feature'
+  geometry: { type: string; coordinates: unknown }
+  properties: {
+    OBJECTID: number
+    Descrip: string | null
+    OC: string | null   // Old County code
+    RCL: string | null  // Register of Common Land ref
+    S16: string | null
+    Map_Area: number | null
+  }
+}
 
 function getSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -38,68 +53,86 @@ function getSupabaseClient() {
 }
 
 function isInEngland(geometry: { type: string; coordinates: unknown }): boolean {
-  // Simple centroid check using first coordinate of first ring
   try {
+    let lng: number, lat: number
     if (geometry.type === 'MultiPolygon') {
-      const coords = geometry.coordinates as number[][][][]
-      const [lng, lat] = coords[0][0][0]
-      return lat >= ENGLAND.minLat && lat <= ENGLAND.maxLat && lng >= ENGLAND.minLng && lng <= ENGLAND.maxLng
+      ;[lng, lat] = (geometry.coordinates as number[][][][])[0][0][0]
+    } else if (geometry.type === 'Polygon') {
+      ;[lng, lat] = (geometry.coordinates as number[][][])[0][0]
+    } else {
+      return false
     }
-    if (geometry.type === 'Polygon') {
-      const coords = geometry.coordinates as number[][][]
-      const [lng, lat] = coords[0][0]
-      return lat >= ENGLAND.minLat && lat <= ENGLAND.maxLat && lng >= ENGLAND.minLng && lng <= ENGLAND.maxLng
-    }
+    return lat >= ENGLAND.minLat && lat <= ENGLAND.maxLat && lng >= ENGLAND.minLng && lng <= ENGLAND.maxLng
   } catch {
     return false
   }
-  return false
+}
+
+async function fetchPage(offset: number): Promise<ArcGisFeature[]> {
+  const url = new URL(ARCGIS_BASE)
+  url.searchParams.set('where', '1=1')
+  url.searchParams.set('outFields', '*')
+  url.searchParams.set('f', 'geojson')
+  url.searchParams.set('resultRecordCount', String(PAGE_SIZE))
+  url.searchParams.set('resultOffset', String(offset))
+
+  const res = await fetch(url.toString(), {
+    headers: { 'User-Agent': 'LandGrabber/1.0 (richard.sutcliffe@gmail.com)' },
+  })
+
+  if (!res.ok) throw new Error(`ArcGIS request failed: HTTP ${res.status} (offset=${offset})`)
+  const body = await res.json()
+  return body.features ?? []
 }
 
 async function main() {
   const supabase = getSupabaseClient()
 
-  console.log('Downloading Natural England common land dataset...')
-  const res = await fetch(WFS_URL, {
-    headers: { 'User-Agent': 'LandGrabber/1.0 (richard.sutcliffe@gmail.com)' },
-  })
+  // Clear existing data for this year before inserting
+  const { error: deleteError } = await supabase
+    .from('common_land')
+    .delete()
+    .eq('data_year', DATA_YEAR)
+  if (deleteError) throw new Error(`Delete failed: ${deleteError.message}`)
 
-  if (!res.ok) throw new Error(`WFS download failed: HTTP ${res.status}`)
-  const geojson = await res.json()
+  console.log('Downloading Natural England common land dataset (ArcGIS)...')
 
-  const features = geojson.features ?? []
-  console.log(`Downloaded ${features.length} features`)
+  let totalFetched = 0
+  let totalInserted = 0
+  let offset = 0
 
-  // Filter to England only
-  const englandFeatures = features.filter((f: { geometry: { type: string; coordinates: unknown } }) =>
-    isInEngland(f.geometry)
-  )
-  console.log(`${englandFeatures.length} features within England extent`)
+  while (true) {
+    const features = await fetchPage(offset)
+    if (features.length === 0) break
 
-  // Clear existing data for this year
-  await supabase.from('common_land').delete().eq('data_year', DATA_YEAR)
+    totalFetched += features.length
+    process.stdout.write(`\r  Fetched ${totalFetched} features...`)
 
-  let inserted = 0
-  for (let i = 0; i < englandFeatures.length; i += BATCH_SIZE) {
-    const batch = englandFeatures.slice(i, i + BATCH_SIZE)
-    const rows = batch.map((f: { properties: Record<string, unknown>; geometry: object }) => ({
-      commons_ref: f.properties.COMMONS_REFERENCE ?? f.properties.commons_ref ?? null,
-      name: f.properties.NAME ?? f.properties.name ?? null,
-      commons_act_registration: f.properties.REGISTRATION_STATUS ?? null,
-      geometry: f.geometry,
-      data_year: DATA_YEAR,
-    }))
+    const englandFeatures = features.filter((f) => isInEngland(f.geometry))
 
-    const { error } = await supabase.from('common_land').insert(rows)
-    if (error) throw new Error(`Insert batch failed: ${error.message}`)
-    inserted += rows.length
-    process.stdout.write(`\r  Inserted ${inserted}/${englandFeatures.length}...`)
+    for (let i = 0; i < englandFeatures.length; i += SUPABASE_BATCH) {
+      const batch = englandFeatures.slice(i, i + SUPABASE_BATCH)
+      const rows = batch.map((f) => ({
+        commons_ref: f.properties.RCL ?? f.properties.OC ?? null,
+        name: f.properties.Descrip ?? null,
+        commons_act_registration: f.properties.S16 ?? null,
+        geometry: f.geometry,
+        data_year: DATA_YEAR,
+      }))
+
+      const { error } = await supabase.from('common_land').insert(rows)
+      if (error) throw new Error(`Insert failed at offset ${offset}: ${error.message}`)
+      totalInserted += rows.length
+    }
+
+    offset += PAGE_SIZE
+    if (features.length < PAGE_SIZE) break
   }
 
-  console.log(`\n✓ Common land loaded: ${inserted} rows`)
+  console.log(`\n✓ Common land loaded: ${totalInserted} England rows from ${totalFetched} total features`)
 }
 
 main().catch((err) => {
-  console.error(err)
+  console.error('\nError:', err.message)
   process.exit(1)
 })
