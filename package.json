@@ -9,7 +9,11 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "pipeline": "npx tsx scripts/data/run-pipeline.ts",
+    "pipeline:yorkshire": "npx tsx scripts/data/run-pipeline.ts --region yorkshire",
+    "pipeline:common-land": "npx tsx scripts/data/run-pipeline.ts --common-only",
+    "pipeline:england-boundary": "npx tsx scripts/data/load-england-boundary.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -29,12 +33,16 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/unzipper": "^0.10.11",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "unzipper": "^0.12.3"
   }
 }
