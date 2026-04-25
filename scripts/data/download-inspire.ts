@@ -48,10 +48,7 @@ async function sleep(ms: number) {
 async function downloadFile(url: string, dest: string, apiKey: string, attempt = 1): Promise<void> {
   try {
     const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'LandGrabber/1.0 (richard.sutcliffe@gmail.com)',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'User-Agent': 'LandGrabber/1.0 (richard.sutcliffe@gmail.com)' },
       redirect: 'follow',
     })
 
@@ -93,7 +90,7 @@ async function main() {
   const errors: string[] = []
 
   for (const [code, name] of laEntries) {
-    const url = `${BASE_URL}/${code}/inspire_polygons.zip`
+    const url = `${BASE_URL}/${code}/inspire_polygons.zip?key=${encodeURIComponent(apiKey)}`
     const dest = path.join(OUT_DIR, `${code}_${name.replace(/\s+/g, '_')}.zip`)
 
     if (fs.existsSync(dest)) {
