@@ -16,7 +16,6 @@
 import fs from 'fs'
 import path from 'path'
 import { execSync, execFileSync } from 'child_process'
-import { createWriteStream } from 'fs'
 import { Open } from 'unzipper'
 
 const ZIPS_DIR = path.resolve('./tmp/inspire/zips')
@@ -39,7 +38,8 @@ async function unzip(zipPath: string, outDir: string): Promise<string[]> {
   for (const file of directory.files) {
     if (!file.path.endsWith('.gml')) continue
     const destPath = path.join(outDir, path.basename(file.path))
-    await pipeline(file.stream(), createWriteStream(destPath))
+    const buffer = await file.buffer()
+    fs.writeFileSync(destPath, buffer)
     extracted.push(destPath)
   }
 

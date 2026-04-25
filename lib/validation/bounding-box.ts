@@ -15,9 +15,9 @@ export interface BoundingBox {
 // England extent (with small margin)
 const ENGLAND = { minLat: 49.8, maxLat: 55.8, minLng: -6.5, maxLng: 2.0 }
 
-// Max bounding box: ~0.1 degrees ≈ 11km lat / ~7km lng at England latitudes
-// 0.105 avoids rejecting valid 0.1° boxes due to floating-point imprecision
-const MAX_DEGREES = 0.105
+// Max bounding box: ~0.06 degrees ≈ 6.7km lat / ~4km lng at England latitudes
+// 0.065 avoids rejecting valid 0.06° boxes due to floating-point imprecision
+const MAX_DEGREES = 0.065
 
 export function validateBoundingBox(raw: Partial<Record<keyof BoundingBox, number>>): BoundingBox {
   const keys: Array<keyof BoundingBox> = ['min_lat', 'min_lng', 'max_lat', 'max_lng']

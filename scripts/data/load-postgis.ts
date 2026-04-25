@@ -2,11 +2,11 @@
  * load-postgis.ts
  *
  * Reads GeoJSON files produced by convert-gml.ts and bulk-inserts
- * features into the registered_land table in Supabase PostGIS.
+ * features into the registered_land table in Supabase PostGIS via
+ * the inspire_batch_insert RPC (migration 004).
  *
- * - Deletes existing rows for the same data_month before inserting (idempotent)
- * - Batches inserts at 500 records per request
- * - Derives local_authority_code from filename prefix
+ * Streams each file to handle large GeoJSON files (e.g. North Yorkshire ~600 MB)
+ * without hitting Node.js string/buffer limits.
  *
  * Usage:
  *   npx tsx scripts/data/load-postgis.ts [--data-month YYYY-MM-DD]
@@ -16,24 +16,19 @@
 
 import fs from 'fs'
 import path from 'path'
+import readline from 'readline'
 import { config } from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
 
 config({ path: '.env.local' })
 
 const GEOJSON_DIR = path.resolve('./tmp/inspire/geojson')
-const BATCH_SIZE = 500
+const BATCH_SIZE = 100  // smaller batches — each feature geometry can be 10s of KB
 
 interface GeoJsonFeature {
   type: 'Feature'
-  id?: string | number
   geometry: object
   properties: Record<string, unknown>
-}
-
-interface GeoJsonCollection {
-  type: 'FeatureCollection'
-  features: GeoJsonFeature[]
 }
 
 function getSupabaseClient() {
@@ -55,6 +50,26 @@ function getDataMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+// ogr2ogr GeoJSON output has one feature per line inside the features array.
+// Readline avoids loading multi-hundred-MB files into a single string.
+async function* streamFeatures(filePath: string): AsyncGenerator<GeoJsonFeature> {
+  const rl = readline.createInterface({
+    input: fs.createReadStream(filePath),
+    crlfDelay: Infinity,
+  })
+
+  for await (const line of rl) {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('{"type":"Feature"') && !trimmed.startsWith('{ "type": "Feature"')) continue
+    const json = trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed
+    try {
+      yield JSON.parse(json) as GeoJsonFeature
+    } catch {
+      // skip malformed lines
+    }
+  }
+}
+
 async function loadGeojsonFile(
   supabase: ReturnType<typeof createClient>,
   geojsonPath: string,
@@ -63,16 +78,7 @@ async function loadGeojsonFile(
   const baseName = path.basename(geojsonPath, '.geojson')
   const laCode = baseName.split('_')[0]
 
-  const raw = fs.readFileSync(geojsonPath, 'utf-8')
-  const collection: GeoJsonCollection = JSON.parse(raw)
-  const features = collection.features ?? []
-
-  if (features.length === 0) {
-    console.log(`  ⏭ No features in ${baseName}`)
-    return 0
-  }
-
-  // Delete existing rows for this LA and data month (idempotent re-run)
+  // Delete existing rows for this LA + data month (idempotent re-run)
   const { error: deleteError } = await supabase
     .from('registered_land')
     .delete()
@@ -82,24 +88,30 @@ async function loadGeojsonFile(
   if (deleteError) throw new Error(`Delete failed for ${laCode}: ${deleteError.message}`)
 
   let inserted = 0
-  for (let i = 0; i < features.length; i += BATCH_SIZE) {
-    const batch = features.slice(i, i + BATCH_SIZE)
-    const rows = batch
-      .filter((f) => f.geometry && f.properties?.INSPIREID)
-      .map((f) => ({
-        inspire_id: Number(f.properties.INSPIREID),
-        local_authority_code: laCode,
-        geometry: `SRID=4326;${JSON.stringify(f.geometry)}`,
-        data_month: dataMonth,
-      }))
+  let batch: { inspire_id: number; geometry: object }[] = []
 
-    if (rows.length === 0) continue
-
-    const { error } = await supabase.from('registered_land').insert(rows)
-    if (error) throw new Error(`Insert batch failed for ${laCode}: ${error.message}`)
-    inserted += rows.length
+  const flush = async () => {
+    if (batch.length === 0) return
+    const { data, error } = await supabase.rpc('inspire_batch_insert', {
+      p_la_code: laCode,
+      p_data_month: dataMonth,
+      p_features: batch,
+    })
+    if (error) throw new Error(`Batch insert failed for ${laCode}: ${error.message}`)
+    inserted += data as number
+    batch = []
   }
 
+  for await (const feature of streamFeatures(geojsonPath)) {
+    if (!feature.geometry || !feature.properties?.INSPIREID) continue
+    batch.push({
+      inspire_id: Number(feature.properties.INSPIREID),
+      geometry: feature.geometry,
+    })
+    if (batch.length >= BATCH_SIZE) await flush()
+  }
+
+  await flush()
   return inserted
 }
 

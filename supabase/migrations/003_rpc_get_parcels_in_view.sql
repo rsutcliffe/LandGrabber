@@ -1,5 +1,12 @@
--- RPC function: returns land parcels intersecting a viewport bounding box
+-- RPC function: returns land parcels intersecting a viewport bounding box.
 -- Called by GET /api/parcels via supabase.rpc('get_parcels_in_view', ...)
+--
+-- Unregistered land is computed dynamically (ST_Difference of viewport minus
+-- registered parcels) rather than pre-computed. This avoids needing the
+-- england_boundary table and works correctly with partial regional data loads.
+-- With the GIST index and max-0.06° viewport constraint this runs in <5s.
+-- SECURITY DEFINER with set local statement_timeout = '15s' overrides the
+-- default 3s anon role timeout for this compute-heavy spatial query.
 create or replace function get_parcels_in_view(
   p_min_lat float,
   p_min_lng float,
@@ -15,22 +22,40 @@ returns table (
   data_month date,
   geometry json
 )
-language sql
-stable
+language plpgsql
+volatile
+security definer
 as $$
+#variable_conflict use_column
+begin
+  set local statement_timeout = '15s';
+
+  return query
   select
-    ul.id,
+    gen_random_uuid() as id,
     'unregistered'::text as land_type,
-    ul.area_sqm,
-    ul.confidence,
-    ul.data_month,
-    st_asgeojson(ul.geometry)::json as geometry
-  from unregistered_land ul
+    st_area(gap.geom::geography) as area_sqm,
+    'medium'::text as confidence,
+    latest.data_month,
+    st_asgeojson(gap.geom)::json as geometry
+  from (
+    select max(data_month) as data_month from registered_land
+  ) latest,
+  lateral (
+    select (st_dump(
+      st_difference(
+        st_makeenvelope(p_min_lng, p_min_lat, p_max_lng, p_max_lat, 4326),
+        st_union(rl.geometry)
+      )
+    )).geom
+    from registered_land rl
+    where st_intersects(rl.geometry, st_makeenvelope(p_min_lng, p_min_lat, p_max_lng, p_max_lat, 4326))
+      and rl.data_month = latest.data_month
+    having count(*) > 0
+  ) gap
   where 'unregistered' = any(p_types)
-    and st_intersects(
-      ul.geometry,
-      st_makeenvelope(p_min_lng, p_min_lat, p_max_lng, p_max_lat, 4326)
-    )
+    and not st_isempty(gap.geom)
+    and st_area(gap.geom::geography) > 25
 
   union all
 
@@ -47,4 +72,5 @@ as $$
       cl.geometry,
       st_makeenvelope(p_min_lng, p_min_lat, p_max_lng, p_max_lat, 4326)
     );
+end;
 $$;
