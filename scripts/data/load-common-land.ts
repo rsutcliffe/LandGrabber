@@ -52,6 +52,14 @@ function getSupabaseClient() {
   return createClient(url, key)
 }
 
+function toMultiPolygon(geometry: { type: string; coordinates: unknown }) {
+  if (geometry.type === 'MultiPolygon') return geometry
+  if (geometry.type === 'Polygon') {
+    return { type: 'MultiPolygon', coordinates: [geometry.coordinates] }
+  }
+  return geometry
+}
+
 function isInEngland(geometry: { type: string; coordinates: unknown }): boolean {
   try {
     let lng: number, lat: number
@@ -116,7 +124,7 @@ async function main() {
         commons_ref: f.properties.RCL ?? f.properties.OC ?? null,
         name: f.properties.Descrip ?? null,
         commons_act_registration: f.properties.S16 ?? null,
-        geometry: f.geometry,
+        geometry: toMultiPolygon(f.geometry),
         data_year: DATA_YEAR,
       }))
 
