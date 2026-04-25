@@ -1,0 +1,27 @@
+{
+  "title": "Town and Village Green Registration",
+  "last_reviewed": "2026-04-01",
+  "sections": [
+    {
+      "heading": "What is a town or village green?",
+      "content": "A town or village green is land that local people have used for lawful sports and pastimes for at least 20 years as of right — without permission, force, or secrecy. Once registered, the land is protected from development."
+    },
+    {
+      "heading": "Eligibility criteria",
+      "content": "To apply for registration, you must show:\n\n1. A significant number of local inhabitants have used the land.\n2. Use has been for lawful sports and pastimes (not just walking through).\n3. Use has continued for at least 20 years.\n4. Use was as of right — without the landowner's permission, without force, and not in secret."
+    },
+    {
+      "heading": "Trigger events",
+      "content": "Registration cannot proceed if a trigger event has occurred — most commonly, the land being identified for development in the planning system. Once a trigger event is registered, the application window closes. Act quickly if you believe land is at risk."
+    },
+    {
+      "heading": "How to apply",
+      "content": "Apply to your county council's commons registration authority using Form CA1 (available on GOV.UK). There is no filing fee, but gathering sufficient evidence of 20 or more years of use requires effort. Legal support is strongly advised.\n\nGOV.UK guidance: https://www.gov.uk/guidance/town-and-village-greens-how-to-register"
+    },
+    {
+      "heading": "Important note",
+      "content": "This is a community process. It does not transfer ownership of the land to you or anyone else. It protects the land for community use and prevents development."
+    }
+  ],
+  "confidence_statement": "Low — village green registration data is not available as a national spatial layer at this stage. Contact your county council for information on registered greens in your area."
+}
