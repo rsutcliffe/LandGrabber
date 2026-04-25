@@ -17,7 +17,7 @@ import fs from 'fs'
 import path from 'path'
 import { execSync, execFileSync } from 'child_process'
 import { createWriteStream } from 'fs'
-import { Extract } from 'unzipper'
+import { Open } from 'unzipper'
 
 const ZIPS_DIR = path.resolve('./tmp/inspire/zips')
 const EXTRACT_DIR = path.resolve('./tmp/inspire/gml')
@@ -33,16 +33,17 @@ function checkOgr2ogr() {
 }
 
 async function unzip(zipPath: string, outDir: string): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    const extracted: string[] = []
-    fs.createReadStream(zipPath)
-      .pipe(Extract({ path: outDir }))
-      .on('entry', (entry) => {
-        if (entry.path.endsWith('.gml')) extracted.push(path.join(outDir, entry.path))
-      })
-      .on('finish', () => resolve(extracted))
-      .on('error', reject)
-  })
+  const directory = await Open.file(zipPath)
+  const extracted: string[] = []
+
+  for (const file of directory.files) {
+    if (!file.path.endsWith('.gml')) continue
+    const destPath = path.join(outDir, path.basename(file.path))
+    await pipeline(file.stream(), createWriteStream(destPath))
+    extracted.push(destPath)
+  }
+
+  return extracted
 }
 
 function convertGmlToGeojson(gmlPath: string, geojsonPath: string) {
