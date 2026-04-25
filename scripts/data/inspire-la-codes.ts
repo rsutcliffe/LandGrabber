@@ -1,26 +1,33 @@
 /**
- * INSPIRE Local Authority codes for Yorkshire and The Humber.
- * Source: ONS Geography codes. Used to filter HMLR INSPIRE downloads for PoC.
- * Expand to all ~330 entries for national run.
+ * Maps ONS LA codes to HMLR INSPIRE download filenames.
+ * URL pattern: BASE_URL/{filename}?key={HMLR_API_KEY}
+ * Filenames sourced from: /datasets/inspire/download (HMLR service index page).
  */
-export const YORKSHIRE_LA_CODES: Record<string, string> = {
-  E08000016: 'Barnsley',
-  E07000163: 'Bradford',
-  E07000165: 'Calderdale',
-  E08000017: 'Doncaster',
-  E06000011: 'East Riding of Yorkshire',
-  E06000010: 'Kingston upon Hull',
-  E07000166: 'Kirklees',
-  E07000167: 'Leeds',
-  E10000023: 'North Yorkshire',
-  E08000018: 'Rotherham',
-  E06000014: 'York',
-  E08000019: 'Sheffield',
-  E07000168: 'Wakefield',
+
+export interface LaEntry {
+  code: string
+  name: string
+  hmlrFile: string
 }
 
-// Full national list stub — populate for production run
-export const ALL_LA_CODES: Record<string, string> = {
-  ...YORKSHIRE_LA_CODES,
-  // Add remaining ~317 LAs here for national run
-}
+export const YORKSHIRE_LAS: LaEntry[] = [
+  { code: 'E08000016', name: 'Barnsley',               hmlrFile: 'Barnsley_Metropolitan_Borough_Council.zip' },
+  { code: 'E07000163', name: 'Bradford',               hmlrFile: 'City_of_Bradford_Metropolitan_District_Council.zip' },
+  { code: 'E07000165', name: 'Calderdale',             hmlrFile: 'Calderdale_Metropolitan_Borough_Council.zip' },
+  { code: 'E08000017', name: 'Doncaster',              hmlrFile: 'Doncaster_Metropolitan_Borough_Council.zip' },
+  { code: 'E06000011', name: 'East Riding of Yorkshire', hmlrFile: 'East_Riding_of_Yorkshire_Council.zip' },
+  { code: 'E06000010', name: 'Kingston upon Hull',     hmlrFile: 'Hull_City_Council.zip' },
+  { code: 'E07000166', name: 'Kirklees',               hmlrFile: 'Kirklees_Council.zip' },
+  { code: 'E07000167', name: 'Leeds',                  hmlrFile: 'Leeds_City_Council.zip' },
+  { code: 'E10000023', name: 'North Yorkshire',        hmlrFile: 'The_North_Yorkshire_Council.zip' },
+  { code: 'E08000018', name: 'Rotherham',              hmlrFile: 'Rotherham_Metropolitan_Borough_Council.zip' },
+  { code: 'E08000019', name: 'Sheffield',              hmlrFile: 'Sheffield_City_Council.zip' },
+  { code: 'E07000168', name: 'Wakefield',              hmlrFile: 'Wakefield_Metropolitan_District_Council.zip' },
+  { code: 'E06000014', name: 'York',                   hmlrFile: 'City_of_York_Council.zip' },
+]
+
+// Full national list — expand for production run by scraping the HMLR download index page
+export const ALL_LAS: LaEntry[] = [
+  ...YORKSHIRE_LAS,
+  // Add remaining ~317 LAs here
+]

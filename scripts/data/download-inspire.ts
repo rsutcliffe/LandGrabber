@@ -22,7 +22,7 @@ import path from 'path'
 import { pipeline } from 'stream/promises'
 import { Readable } from 'stream'
 import { config } from 'dotenv'
-import { YORKSHIRE_LA_CODES, ALL_LA_CODES } from './inspire-la-codes'
+import { YORKSHIRE_LAS, ALL_LAS, LaEntry } from './inspire-la-codes'
 
 config({ path: '.env.local' })
 
@@ -45,7 +45,7 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function downloadFile(url: string, dest: string, apiKey: string, attempt = 1): Promise<void> {
+async function downloadFile(url: string, dest: string, attempt = 1): Promise<void> {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'LandGrabber/1.0 (richard.sutcliffe@gmail.com)' },
@@ -69,7 +69,7 @@ async function downloadFile(url: string, dest: string, apiKey: string, attempt =
     if (attempt < MAX_RETRIES) {
       console.warn(`  ⚠ Attempt ${attempt} failed — retrying in ${RETRY_DELAY_MS / 1000}s`)
       await sleep(RETRY_DELAY_MS)
-      return downloadFile(url, dest, apiKey, attempt + 1)
+      return downloadFile(url, dest, attempt + 1)
     }
     throw new Error(`Failed after ${MAX_RETRIES} attempts: ${msg}`)
   }
@@ -81,31 +81,30 @@ async function main() {
     ? process.argv[process.argv.indexOf('--region') + 1]
     : 'yorkshire'
 
-  const laCodes = region === 'all' ? ALL_LA_CODES : YORKSHIRE_LA_CODES
-  const laEntries = Object.entries(laCodes)
+  const las: LaEntry[] = region === 'all' ? ALL_LAS : YORKSHIRE_LAS
 
-  console.log(`Downloading INSPIRE data for ${laEntries.length} LAs (${region})`)
+  console.log(`Downloading INSPIRE data for ${las.length} LAs (${region})`)
   fs.mkdirSync(OUT_DIR, { recursive: true })
 
   const errors: string[] = []
 
-  for (const [code, name] of laEntries) {
-    const url = `${BASE_URL}/${code}/inspire_polygons.zip?key=${encodeURIComponent(apiKey)}`
-    const dest = path.join(OUT_DIR, `${code}_${name.replace(/\s+/g, '_')}.zip`)
+  for (const la of las) {
+    const url = `${BASE_URL}/${la.hmlrFile}?key=${encodeURIComponent(apiKey)}`
+    const dest = path.join(OUT_DIR, `${la.code}_${la.name.replace(/\s+/g, '_')}.zip`)
 
     if (fs.existsSync(dest)) {
-      console.log(`  ⏭ Already downloaded: ${name}`)
+      console.log(`  ⏭ Already downloaded: ${la.name}`)
       continue
     }
 
-    process.stdout.write(`Downloading ${name} (${code})... `)
+    process.stdout.write(`Downloading ${la.name} (${la.code})... `)
     try {
-      await downloadFile(url, dest, apiKey)
+      await downloadFile(url, dest)
       console.log('✓')
     } catch (err) {
       console.log('✗')
       console.error(`  ${(err as Error).message}`)
-      errors.push(`${name} (${code})`)
+      errors.push(`${la.name} (${la.code})`)
     }
   }
 
