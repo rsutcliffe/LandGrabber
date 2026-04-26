@@ -9,21 +9,25 @@ global.fetch = mockFetch
 const unregisteredParcel: SelectedParcel = {
   id: 'parcel-001',
   properties: {
+    id: 'parcel-001',
     land_type: 'unregistered',
     area_sqm: 1500,
     confidence: 'medium',
     data_month: '2024-01-01',
   },
+  lngLat: { lng: -1.5, lat: 53.8 },
 }
 
 const commonParcel: SelectedParcel = {
   id: 'parcel-002',
   properties: {
+    id: 'parcel-002',
     land_type: 'common',
     area_sqm: 25000,
     confidence: null,
     data_month: '2024-06-01',
   },
+  lngLat: { lng: -1.5, lat: 53.8 },
 }
 
 beforeEach(() => {

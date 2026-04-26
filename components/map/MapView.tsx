@@ -20,7 +20,7 @@ export interface SelectedParcel {
     id: string
     land_type: 'unregistered' | 'common'
     area_sqm: number
-    confidence: string
+    confidence: string | null
     data_month: string
   }
   lngLat: { lng: number; lat: number }
