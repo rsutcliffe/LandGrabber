@@ -12,24 +12,28 @@ const TYPE_LABEL: Record<string, string> = {
   unregistered: 'No registered title',
   common: 'Registered common land',
   bona_vacantia: 'Crown ownerless property',
+  village_green: 'Town or village green',
 }
 
 const TYPE_TOOLTIP: Record<string, string> = {
   unregistered: 'Land with no registered title at HMLR — it may be unregistered but is not guaranteed to be acquirable. Always seek independent legal advice.',
   common: 'Land registered under the Commons Registration Act. Public access rights apply but the land is owned.',
   bona_vacantia: 'Land passed to the Crown because the previous owner died without heirs or a company was dissolved. Must be purchased at market value from the BVD.',
+  village_green: 'Land registered as a town or village green under the Commons Registration Act. Local inhabitants have the right to use it for lawful sports and pastimes. The land cannot be developed.',
 }
 
 const TYPE_BADGE: Record<string, string> = {
   unregistered: 'bg-green-100 text-green-800',
   common: 'bg-blue-100 text-blue-800',
   bona_vacantia: 'bg-amber-100 text-amber-800',
+  village_green: 'bg-purple-100 text-purple-800',
 }
 
 const TYPE_SOURCE: Record<string, string> = {
   unregistered: 'HMLR INSPIRE Index Polygons',
   common: 'Natural England CRoW Act register',
   bona_vacantia: 'BVD / Government Legal Department',
+  village_green: 'County council commons registration authorities',
 }
 
 interface ParcelPanelProps {
@@ -149,6 +153,12 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
         {land_type === 'bona_vacantia' && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
             Bona vacantia land is Crown property and must be purchased at market value from the Bona Vacantia Division. It is not freely acquirable. Seek specialist legal advice.
+          </div>
+        )}
+
+        {land_type === 'village_green' && (
+          <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 text-xs text-purple-800 leading-relaxed">
+            Registered town and village greens are protected from development. Local inhabitants have the right to use them for lawful sports and pastimes. Acquisition is not possible — registration does not transfer ownership.
           </div>
         )}
 

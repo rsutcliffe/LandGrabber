@@ -18,7 +18,7 @@ export interface SelectedParcel {
   id: string
   properties: {
     id: string
-    land_type: 'unregistered' | 'common' | 'bona_vacantia'
+    land_type: 'unregistered' | 'common' | 'bona_vacantia' | 'village_green'
     area_sqm: number
     confidence: string | null
     data_month: string
@@ -127,7 +127,7 @@ const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSele
         initialViewState={{ longitude: -1.549, latitude: 53.8, zoom: 10 }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={MAP_STYLE}
-        interactiveLayerIds={['unregistered-fill', 'common-fill', 'bona-vacantia-fill']}
+        interactiveLayerIds={['unregistered-fill', 'common-fill', 'bona-vacantia-fill', 'village-green-fill']}
         cursor={cursor}
         onClick={handleClick}
         onLoad={scheduleFetch}
@@ -171,6 +171,18 @@ const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSele
             type="line"
             filter={['==', ['get', 'land_type'], 'bona_vacantia']}
             paint={{ 'line-color': '#b45309', 'line-width': 1 }}
+          />
+          <Layer
+            id="village-green-fill"
+            type="fill"
+            filter={['==', ['get', 'land_type'], 'village_green']}
+            paint={{ 'fill-color': '#7c3aed', 'fill-opacity': 0.4 }}
+          />
+          <Layer
+            id="village-green-outline"
+            type="line"
+            filter={['==', ['get', 'land_type'], 'village_green']}
+            paint={{ 'line-color': '#6d28d9', 'line-width': 1 }}
           />
         </Source>
       </Map>
