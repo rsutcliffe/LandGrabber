@@ -115,7 +115,7 @@ async function main() {
 
     batch.push({
       geometry: JSON.stringify(feature.geometry),
-      roadClassification: feature.properties?.roadClassification ?? null,
+      roadClassification: feature.properties?.road_classification ?? null,
       fictitious: feature.properties?.fictitious ?? false,
     })
 
