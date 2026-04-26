@@ -13,19 +13,16 @@
  *   Licence: Open Government Licence v3.0
  *
  * Inspect before loading:
- *   ogrinfo -al -so OpenGreenspace_GPKG/OS_Open_Greenspace.gpkg
- *   Expected layer: greenspace_site
- *   Expected fields: id, distName1, function
+ *   ogrinfo -al -so opgrsp_gb.gpkg
+ *   Layer: greenspace_site
+ *   Fields: id, function, distinctive_name_1, distinctive_name_2, ...
+ *   SRS: EPSG:27700 (BNG) — must reproject to 4326 via ogr2ogr
  *
- * Convert to line-delimited GeoJSON (bbox filter optional):
- *   ogr2ogr -f GeoJSON /vsistdout/ \
- *     -spat -2.6 53.3 0.2 54.7 -spat_srs EPSG:4326 \
- *     OpenGreenspace_GPKG/OS_Open_Greenspace.gpkg greenspace_site \
- *   | npx tsx scripts/data/load-greenspace.ts --input /dev/stdin
- *
- *   Or convert to file first:
+ * Convert to GeoJSON (Yorkshire bbox; remove -spat for full GB):
  *   ogr2ogr -f GeoJSON tmp/greenspace.geojson \
- *     OpenGreenspace_GPKG/OS_Open_Greenspace.gpkg greenspace_site
+ *     -t_srs EPSG:4326 \
+ *     -spat -2.6 53.3 0.2 54.7 -spat_srs EPSG:4326 \
+ *     tmp/greenspace/Data/opgrsp_gb.gpkg greenspace_site
  *
  * Usage:
  *   npx tsx scripts/data/load-greenspace.ts --input path/to/greenspace.geojson
@@ -164,7 +161,7 @@ async function main() {
     batch.push({
       os_id:    p?.id     ?? p?.ID     ?? null,
       function: p?.function ?? p?.FUNCTION ?? p?.func ?? null,
-      name:     p?.distName1 ?? p?.name ?? p?.NAME ?? null,
+      name:     p?.distinctive_name_1 ?? p?.distName1 ?? p?.name ?? p?.NAME ?? null,
       geometry: toMultiPolygon(feature.geometry),
     })
 

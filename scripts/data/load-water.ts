@@ -12,15 +12,17 @@
  *   Licence: Open Government Licence v3.0
  *
  * Inspect before loading:
- *   ogrinfo -al -so OpenRivers_GPKG/OS_Open_Rivers.gpkg
- *   Expected layer: WatercourseLink
- *   Expected fields: id, name1, form
+ *   ogrinfo -al -so oprvrs_gb.gpkg
+ *   Layer: watercourse_link
+ *   Fields: id, form, watercourse_name, flow_direction, length, fictitious
  *   Form values: River, Canal, Tidal River, Non-Tidal Water Interlinking, Drain, etc.
+ *   SRS: EPSG:27700 (BNG) — must reproject to 4326 via ogr2ogr
  *
- * Convert to line-delimited GeoJSON (bbox filter for Yorkshire):
+ * Convert to GeoJSON (Yorkshire bbox; remove -spat for full GB):
  *   ogr2ogr -f GeoJSON tmp/water_links.geojson \
+ *     -t_srs EPSG:4326 \
  *     -spat -2.6 53.3 0.2 54.7 -spat_srs EPSG:4326 \
- *     OpenRivers_GPKG/OS_Open_Rivers.gpkg WatercourseLink
+ *     tmp/rivers/Data/oprvrs_gb.gpkg watercourse_link
  *
  * Usage:
  *   npx tsx scripts/data/load-water.ts --input path/to/water_links.geojson
@@ -166,7 +168,7 @@ async function main() {
 
     batch.push({
       form:     form || null,
-      name:     p?.name1 ?? p?.name ?? p?.NAME ?? null,
+      name:     p?.watercourse_name ?? p?.name1 ?? p?.name ?? p?.NAME ?? null,
       geometry: feature.geometry,
       buffer_m: bufferM,
     })
