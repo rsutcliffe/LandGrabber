@@ -1,16 +1,21 @@
 /**
  * load-os-roads.ts
  *
- * Reads OS Open Roads RoadLink GeoJSON and inserts buffered road-surface
- * polygons into the road_surfaces table via road_surfaces_batch_insert RPC.
+ * Reads OS Open Roads RoadLink GeoJSON and inserts raw linestrings into the
+ * road_links table via road_links_batch_insert RPC. Buffering into road-surface
+ * polygons happens at query time in get_parcels_in_view (applied only to the
+ * ~200-500 segments that intersect each viewport), keeping storage to ~150MB
+ * nationally vs ~1-2GB for pre-buffered polygons.
  *
  * Prerequisites:
- *   - Migration 008 + 009 applied
+ *   - Migrations 011 + 012 applied
  *   - OS Open Roads GeoPackage downloaded from https://osdatahub.os.uk/downloads/open/OpenRoads
  *   - Convert to GeoJSON first:
+ *       mkdir -p tmp/roads
  *       ogr2ogr -f GeoJSON -t_srs EPSG:4326 \
  *         tmp/roads/road_links.geojson \
- *         oproad_essh_gb.gpkg RoadLink
+ *         tmp/roads/oproad_essh_gb.gpkg \
+ *         RoadLink
  *
  * Usage:
  *   npx tsx scripts/data/load-os-roads.ts [--input path/to/road_links.geojson]
@@ -72,21 +77,21 @@ async function main() {
   if (!fs.existsSync(inputPath)) {
     console.error(`Input file not found: ${inputPath}`)
     console.error('Convert OS Open Roads GeoPackage first:')
-    console.error('  ogr2ogr -f GeoJSON -t_srs EPSG:4326 tmp/roads/road_links.geojson oproad_essh_gb.gpkg RoadLink')
+    console.error('  mkdir -p tmp/roads')
+    console.error('  ogr2ogr -f GeoJSON -t_srs EPSG:4326 tmp/roads/road_links.geojson tmp/roads/oproad_essh_gb.gpkg RoadLink')
     process.exit(1)
   }
 
   console.log(`Input: ${inputPath}`)
-  console.log('Truncating road_surfaces...')
+  console.log('Clearing road_links...')
 
-  const { error: truncErr } = await supabase.rpc('road_surfaces_truncate' as never)
-  if (truncErr) {
-    // fall back to delete all (truncate RPC may not exist)
-    const { error: delErr } = await supabase.from('road_surfaces').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    if (delErr) {
-      console.error('Failed to clear road_surfaces:', delErr.message)
-      process.exit(1)
-    }
+  const { error: delErr } = await supabase
+    .from('road_links')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000')
+  if (delErr) {
+    console.error('Failed to clear road_links:', delErr.message)
+    process.exit(1)
   }
 
   let batch: object[] = []
@@ -95,7 +100,7 @@ async function main() {
 
   const flush = async () => {
     if (batch.length === 0) return
-    const { data, error } = await supabase.rpc('road_surfaces_batch_insert', {
+    const { data, error } = await supabase.rpc('road_links_batch_insert', {
       p_features: batch,
     } as never)
     if (error) throw new Error(`Batch insert failed: ${error.message}`)
@@ -117,13 +122,13 @@ async function main() {
     totalProcessed++
     if (batch.length >= BATCH_SIZE) await flush()
     if (totalProcessed % 10000 === 0) {
-      process.stdout.write(`  Processed ${totalProcessed.toLocaleString()} features, inserted ${totalInserted.toLocaleString()} surfaces...\r`)
+      process.stdout.write(`  ${totalProcessed.toLocaleString()} processed, ${totalInserted.toLocaleString()} inserted...\r`)
     }
   }
 
   await flush()
 
-  console.log(`\n✓ Done. Processed ${totalProcessed.toLocaleString()} links → ${totalInserted.toLocaleString()} road surfaces inserted`)
+  console.log(`\n✓ Done. ${totalProcessed.toLocaleString()} links processed → ${totalInserted.toLocaleString()} inserted`)
 }
 
 main().catch((err) => {
