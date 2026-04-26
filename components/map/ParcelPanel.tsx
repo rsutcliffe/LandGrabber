@@ -36,6 +36,32 @@ const TYPE_SOURCE: Record<string, string> = {
   village_green: 'County council commons registration authorities',
 }
 
+interface ParcelContext {
+  adjacent_registered: number
+  nearest_m: number | null
+}
+
+function useParcelContext(lngLat: { lng: number; lat: number } | null, landType: string) {
+  const [context, setContext] = useState<ParcelContext | null>(null)
+
+  useEffect(() => {
+    if (!lngLat || landType !== 'unregistered') {
+      setContext(null)
+      return
+    }
+    const params = new URLSearchParams({
+      lng: String(lngLat.lng),
+      lat: String(lngLat.lat),
+    })
+    fetch(`/api/parcel-context?${params}`)
+      .then((r) => r.json())
+      .then((d) => setContext(d))
+      .catch(() => setContext(null))
+  }, [lngLat, landType])
+
+  return context
+}
+
 interface ParcelPanelProps {
   parcel: SelectedParcel | null
   onClose: () => void
@@ -78,6 +104,10 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
     parcel?.id ?? '',
     parcel?.properties.land_type ?? '',
     parcel?.properties.area_sqm ?? 0
+  )
+  const context = useParcelContext(
+    parcel?.lngLat ?? null,
+    parcel?.properties.land_type ?? ''
   )
 
   if (!parcel) return null
@@ -136,7 +166,26 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
               <dd className="font-medium text-zinc-900 capitalize">{confidence}</dd>
             </div>
           )}
+          {land_type === 'unregistered' && context !== null && (
+            <div>
+              <dt className="text-zinc-500">Adjacent registered titles</dt>
+              <dd className="font-medium text-zinc-900">
+                {context.adjacent_registered === 0
+                  ? 'None within 100m'
+                  : `${context.adjacent_registered} within 100m`}
+                {context.nearest_m !== null && context.adjacent_registered > 0 && (
+                  <span className="text-zinc-500 font-normal ml-1">(nearest {context.nearest_m}m)</span>
+                )}
+              </dd>
+            </div>
+          )}
         </dl>
+
+        {land_type === 'unregistered' && context !== null && context.adjacent_registered >= 5 && (
+          <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 text-xs text-zinc-700 leading-relaxed">
+            This gap is surrounded by {context.adjacent_registered} registered titles — it may be curtilage of an adjacent property rather than independently acquirable land.
+          </div>
+        )}
 
         {land_type === 'unregistered' && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
