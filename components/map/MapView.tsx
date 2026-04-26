@@ -26,18 +26,45 @@ export interface SelectedParcel {
   lngLat: { lng: number; lat: number }
 }
 
+export interface SummaryParcel {
+  areaSqm: number
+  center: [number, number] // [lng, lat]
+}
+
 interface GeoJsonCollection {
   type: 'FeatureCollection'
   features: unknown[]
 }
 
+interface GeoJsonFeatureRaw {
+  properties: { land_type: string; area_sqm: number; confidence: string }
+  geometry: { coordinates: unknown }
+}
+
+function getBboxCenter(geometry: { coordinates: unknown }): [number, number] | null {
+  const coords: number[][] = []
+  const collect = (c: unknown): void => {
+    if (Array.isArray(c) && typeof c[0] === 'number') coords.push(c as number[])
+    else if (Array.isArray(c)) c.forEach(collect)
+  }
+  collect(geometry.coordinates)
+  if (!coords.length) return null
+  const lngs = coords.map((c) => c[0])
+  const lats = coords.map((c) => c[1])
+  return [
+    (Math.min(...lngs) + Math.max(...lngs)) / 2,
+    (Math.min(...lats) + Math.max(...lats)) / 2,
+  ]
+}
+
 interface MapViewProps {
   onParcelSelect: (parcel: SelectedParcel | null) => void
+  onParcelsLoaded?: (highConfidence: SummaryParcel[]) => void
 }
 
 const EMPTY_COLLECTION: GeoJsonCollection = { type: 'FeatureCollection', features: [] }
 
-const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSelect }, ref) {
+const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSelect, onParcelsLoaded }, ref) {
   const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [geoJson, setGeoJson] = useState<GeoJsonCollection>(EMPTY_COLLECTION)
   const [belowMinZoom, setBelowMinZoom] = useState(true)
@@ -75,8 +102,16 @@ const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSele
     try {
       const res = await fetch(`/api/parcels?${params}`)
       if (res.ok) {
-        setGeoJson(await res.json())
+        const data = await res.json()
+        setGeoJson(data)
         setFetchError(false)
+        if (onParcelsLoaded) {
+          const high: SummaryParcel[] = (data.features as GeoJsonFeatureRaw[] ?? [])
+            .filter((f) => f.properties.land_type === 'unregistered' && f.properties.confidence === 'high')
+            .map((f) => ({ areaSqm: f.properties.area_sqm, center: getBboxCenter(f.geometry) ?? [0, 0] }))
+            .sort((a, b) => b.areaSqm - a.areaSqm)
+          onParcelsLoaded(high)
+        }
       } else {
         setFetchError(true)
       }
