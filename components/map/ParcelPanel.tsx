@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { SelectedParcel } from './MapView'
 
 function formatArea(sqm: number): string {
@@ -32,7 +33,45 @@ interface ParcelPanelProps {
   onClose: () => void
 }
 
+function useSaveState(parcelId: string, landType: string, areaSqm: number) {
+  const [saved, setSaved] = useState<boolean | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setSaved(null)
+    fetch(`/api/parcel/${parcelId}`)
+      .then((r) => r.json())
+      .then((d) => setSaved(d.saved ?? false))
+      .catch(() => setSaved(false))
+  }, [parcelId])
+
+  async function toggle() {
+    if (saved === null || saving) return
+    setSaving(true)
+    try {
+      const method = saved ? 'DELETE' : 'POST'
+      const body = saved ? undefined : JSON.stringify({ land_type: landType, area_sqm: areaSqm })
+      const res = await fetch(`/api/parcel/${parcelId}`, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body,
+      })
+      if (res.ok) setSaved(!saved)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return { saved, saving, toggle }
+}
+
 export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
+  const { saved, saving, toggle } = useSaveState(
+    parcel?.id ?? '',
+    parcel?.properties.land_type ?? '',
+    parcel?.properties.area_sqm ?? 0
+  )
+
   if (!parcel) return null
 
   const { properties } = parcel
@@ -102,6 +141,19 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
             Registered common land has public access rights but is owned. Acquisition routes are limited — seek specialist advice.
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={saved === null || saving}
+          className={`w-full py-2 text-sm rounded border transition-colors disabled:opacity-40 ${
+            saved
+              ? 'border-zinc-300 text-zinc-600 hover:border-red-300 hover:text-red-600'
+              : 'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-700'
+          }`}
+        >
+          {saved === null ? 'Loading…' : saving ? '…' : saved ? 'Saved — click to remove' : 'Save parcel'}
+        </button>
       </div>
     </aside>
   )

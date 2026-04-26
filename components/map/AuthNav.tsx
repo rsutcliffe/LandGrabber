@@ -35,8 +35,14 @@ export default function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full pl-3 pr-1.5 py-1.5 shadow">
-      <span className="text-xs text-zinc-600 max-w-[140px] truncate">{user.email}</span>
+    <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full pl-3 pr-1.5 py-1.5 shadow">
+      <span className="text-xs text-zinc-600 max-w-[120px] truncate">{user.email}</span>
+      <Link
+        href="/saved"
+        className="text-xs text-zinc-500 hover:text-zinc-900 px-2 py-0.5 rounded-full hover:bg-zinc-100"
+      >
+        Saved
+      </Link>
       <form action="/auth/signout" method="POST">
         <button
           type="submit"
