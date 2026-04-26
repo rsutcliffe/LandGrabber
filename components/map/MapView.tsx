@@ -18,7 +18,7 @@ export interface SelectedParcel {
   id: string
   properties: {
     id: string
-    land_type: 'unregistered' | 'common'
+    land_type: 'unregistered' | 'common' | 'bona_vacantia'
     area_sqm: number
     confidence: string | null
     data_month: string
@@ -127,7 +127,7 @@ const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSele
         initialViewState={{ longitude: -1.549, latitude: 53.8, zoom: 10 }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={MAP_STYLE}
-        interactiveLayerIds={['unregistered-fill', 'common-fill']}
+        interactiveLayerIds={['unregistered-fill', 'common-fill', 'bona-vacantia-fill']}
         cursor={cursor}
         onClick={handleClick}
         onLoad={scheduleFetch}
@@ -159,6 +159,18 @@ const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ onParcelSele
             type="line"
             filter={['==', ['get', 'land_type'], 'common']}
             paint={{ 'line-color': '#1d4ed8', 'line-width': 1 }}
+          />
+          <Layer
+            id="bona-vacantia-fill"
+            type="fill"
+            filter={['==', ['get', 'land_type'], 'bona_vacantia']}
+            paint={{ 'fill-color': '#d97706', 'fill-opacity': 0.4 }}
+          />
+          <Layer
+            id="bona-vacantia-outline"
+            type="line"
+            filter={['==', ['get', 'land_type'], 'bona_vacantia']}
+            paint={{ 'line-color': '#b45309', 'line-width': 1 }}
           />
         </Source>
       </Map>

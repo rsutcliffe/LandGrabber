@@ -11,21 +11,25 @@ function formatArea(sqm: number): string {
 const TYPE_LABEL: Record<string, string> = {
   unregistered: 'No registered title',
   common: 'Registered common land',
+  bona_vacantia: 'Crown ownerless property',
 }
 
 const TYPE_TOOLTIP: Record<string, string> = {
   unregistered: 'Land with no registered title at HMLR — it may be unregistered but is not guaranteed to be acquirable. Always seek independent legal advice.',
   common: 'Land registered under the Commons Registration Act. Public access rights apply but the land is owned.',
+  bona_vacantia: 'Land passed to the Crown because the previous owner died without heirs or a company was dissolved. Must be purchased at market value from the BVD.',
 }
 
 const TYPE_BADGE: Record<string, string> = {
   unregistered: 'bg-green-100 text-green-800',
   common: 'bg-blue-100 text-blue-800',
+  bona_vacantia: 'bg-amber-100 text-amber-800',
 }
 
 const TYPE_SOURCE: Record<string, string> = {
   unregistered: 'HMLR INSPIRE Index Polygons',
   common: 'Natural England CRoW Act register',
+  bona_vacantia: 'BVD / Government Legal Department',
 }
 
 interface ParcelPanelProps {
@@ -139,6 +143,12 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
         {land_type === 'common' && (
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800 leading-relaxed">
             Registered common land has public access rights but is owned. Acquisition routes are limited — seek specialist advice.
+          </div>
+        )}
+
+        {land_type === 'bona_vacantia' && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
+            Bona vacantia land is Crown property and must be purchased at market value from the Bona Vacantia Division. It is not freely acquirable. Seek specialist legal advice.
           </div>
         )}
 
