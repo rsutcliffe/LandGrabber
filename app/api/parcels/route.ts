@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase/server'
 import { BoundingBoxError, parseBoundingBoxFromSearchParams } from '@/lib/validation/bounding-box'
 
 const VALID_TYPES = ['unregistered', 'common', 'registered'] as const
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export async function GET(request: NextRequest) {
   let bbox
@@ -25,6 +20,7 @@ export async function GET(request: NextRequest) {
     ? typesParam.split(',').filter((t) => VALID_TYPES.includes(t as never))
     : ['unregistered', 'common']
 
+  const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('get_parcels_in_view', {
     p_min_lat: bbox.min_lat,
     p_min_lng: bbox.min_lng,

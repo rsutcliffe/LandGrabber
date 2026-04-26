@@ -8,8 +8,13 @@ function formatArea(sqm: number): string {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  unregistered: 'Potentially unregistered land',
+  unregistered: 'No registered title',
   common: 'Registered common land',
+}
+
+const TYPE_TOOLTIP: Record<string, string> = {
+  unregistered: 'Land with no registered title at HMLR — it may be unregistered but is not guaranteed to be acquirable. Always seek independent legal advice.',
+  common: 'Land registered under the Commons Registration Act. Public access rights apply but the land is owned.',
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -58,7 +63,10 @@ export default function ParcelPanel({ parcel, onClose }: ParcelPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${TYPE_BADGE[land_type] ?? 'bg-zinc-100 text-zinc-700'}`}>
+        <span
+          className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium cursor-help ${TYPE_BADGE[land_type] ?? 'bg-zinc-100 text-zinc-700'}`}
+          title={TYPE_TOOLTIP[land_type]}
+        >
           {TYPE_LABEL[land_type] ?? land_type}
         </span>
 

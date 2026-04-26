@@ -7,7 +7,7 @@ import {
 } from '@/lib/validation/bounding-box'
 
 describe('validateBoundingBox', () => {
-  const validBox = { min_lat: 53.7, min_lng: -1.6, max_lat: 53.8, max_lng: -1.5 }
+  const validBox = { min_lat: 53.74, min_lng: -1.57, max_lat: 53.80, max_lng: -1.51 }
 
   it('returns parsed floats for a valid England bounding box', () => {
     const result = validateBoundingBox(validBox)

@@ -71,7 +71,7 @@ async function* streamFeatures(filePath: string): AsyncGenerator<GeoJsonFeature>
 }
 
 async function loadGeojsonFile(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof getSupabaseClient>,
   geojsonPath: string,
   dataMonth: string
 ): Promise<number> {
@@ -96,7 +96,7 @@ async function loadGeojsonFile(
       p_la_code: laCode,
       p_data_month: dataMonth,
       p_features: batch,
-    })
+    } as never)
     if (error) throw new Error(`Batch insert failed for ${laCode}: ${error.message}`)
     inserted += data as number
     batch = []

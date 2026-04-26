@@ -5,6 +5,7 @@ import { useRef, useState, useCallback } from 'react'
 import type { MapRef } from 'react-map-gl/maplibre'
 import SearchBar from './SearchBar'
 import ParcelPanel from './ParcelPanel'
+import MapErrorBoundary from './MapErrorBoundary'
 import type { SelectedParcel } from './MapView'
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false })
@@ -20,7 +21,9 @@ export default function MapPage() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <MapView ref={mapRef} onParcelSelect={setSelectedParcel} />
+      <MapErrorBoundary>
+        <MapView ref={mapRef} onParcelSelect={setSelectedParcel} />
+      </MapErrorBoundary>
 
       <div className="absolute top-4 left-4 z-10">
         <SearchBar onSelect={handleSearchSelect} />
