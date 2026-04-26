@@ -6,6 +6,7 @@ import type { MapRef } from 'react-map-gl/maplibre'
 import SearchBar from './SearchBar'
 import ParcelPanel from './ParcelPanel'
 import MapErrorBoundary from './MapErrorBoundary'
+import AuthNav from './AuthNav'
 import type { SelectedParcel } from './MapView'
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false })
@@ -27,6 +28,10 @@ export default function MapPage() {
 
       <div className="absolute top-4 left-4 z-10">
         <SearchBar onSelect={handleSearchSelect} />
+      </div>
+
+      <div className="absolute top-4 right-4 z-10">
+        <AuthNav />
       </div>
 
       <ParcelPanel parcel={selectedParcel} onClose={() => setSelectedParcel(null)} />
