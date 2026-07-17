@@ -4,7 +4,6 @@
 create or replace function get_parcel_context(p_lng float, p_lat float)
 returns json
 language plpgsql
-stable
 security definer
 as $$
 declare
