@@ -16,12 +16,12 @@
     "pipeline:england-boundary": "npx tsx scripts/data/load-england-boundary.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.2",
+    "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.104.1",
     "maplibre-gl": "^5.24.0",
-    "next": "16.2.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "react-map-gl": "^8.1.1"
   },
   "devDependencies": {
